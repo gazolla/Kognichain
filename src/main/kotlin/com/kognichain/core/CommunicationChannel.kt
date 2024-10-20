@@ -1,8 +1,8 @@
-package com.kognichain.team
+package com.kognichain.core
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class CommunicationChannel {
+class CommunicationChannelImp {
     private val messages = ConcurrentLinkedQueue<Message>()
 
     fun send(message: Message) {

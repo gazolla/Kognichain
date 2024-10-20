@@ -11,6 +11,9 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation("com.sun.mail:jakarta.mail:2.0.1")
+    implementation("org.apache.pdfbox:pdfbox:2.0.29")
 }
 
 tasks.test {

@@ -1,51 +1,30 @@
-package org.example
+package com.kognichain.examples
 
-import com.kognichain.actuators.SimpleActuator
-import com.kognichain.core.Action
 import com.kognichain.core.Agent
-import com.kognichain.core.Task
-import com.kognichain.decisionmakers.SimpleDecisionMaker
+import com.kognichain.decisionmakers.LLMDecisionMaker
+import com.kognichain.llm.Gemini
+import com.kognichain.listeners.UserInputListener
+import com.kognichain.tasks.ConsoleOutputTask
 import com.kognichain.memories.SimpleMemory
-import com.kognichain.sensors.SimpleSensor
+import kotlinx.coroutines.runBlocking
 
-fun main() {
-    // Create a simple weather monitoring agent
-    val weatherSensor = SimpleSensor("temperature", 25)
-    val notificationActuator = SimpleActuator { params ->
-        println("Weather notification: Temperature is ${params["temperature"]}°C")
-    }
-
-    val decisionMaker = SimpleDecisionMaker { input ->
-        object : Action {
-            override fun execute(): Result<Any> {
-                val temperature = input["temperature"] as? Int ?: 0
-                return if (temperature > 30) {
-                    println("Temperature is above 30°C, notifying...")
-                    notificationActuator.execute(input)
-                } else {
-                    println("Temperature is ${temperature}°C, no notification needed.")
-                    Result.success(Unit)
-                }
-            }
-            override fun cancel(): Boolean = true
-        }
-    }
-
+fun main() = runBlocking{
     val memory = SimpleMemory()
-    val weatherAgent = Agent("WeatherMonitor", memory, decisionMaker)
-
-    val monitorWeatherTask = Task(
-        name = "MonitorWeather",
-        sensors = listOf(weatherSensor),
-        actuators = listOf(notificationActuator)
+    val tasks = listOf(ConsoleOutputTask())
+    val decisionMaker = LLMDecisionMaker(
+        llmClient = Gemini(),  // Podemos usar Gemini como LLM.
+        memory = memory,
+        tasks = tasks
     )
 
-    weatherAgent.addTask(monitorWeatherTask)
-
-    println("Executing agent with temperature 25°C")
-    weatherAgent.execute()
-
-    println("\nChanging temperature to 35°C")
-    weatherSensor.setValue(35)
-    weatherAgent.execute()
+    val listeners = listOf(UserInputListener())
+    val initialPrompt = "You are a helpful assistant. Respond to the user's questions clearly."
+   val agent = Agent(
+        listeners = listeners,
+        decisionMaker = decisionMaker,
+        tasks = tasks,
+        memory = memory,
+        initialPrompt = initialPrompt
+    )
+    agent.runAgent()
 }

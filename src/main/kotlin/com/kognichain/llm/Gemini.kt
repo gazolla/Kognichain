@@ -10,30 +10,44 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.util.regex.Pattern
 
-class SimpleLLMClient() : LLMClient {
+class Gemini() : LLMClient {
     private val httpClient = HttpClient.newBuilder().build()
-    private val API_KEY = "<<Adicione sua chave aqui>>"
+    private val API_KEY = ""
     private val URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent"
 
     override suspend fun generateResponse(prompt: String): String {
-
-      //  val fullPrompt = "return the result as plain text without any formatting, special characters, or backticks. Question:$prompt"
-
-        val jsonRequest = """{"contents":[{"parts":[{"text":"$prompt"}],"role":"user"}]}"""
-
         val request = HttpRequest.newBuilder()
             .uri(URI.create("$URL?alt=sse&key=$API_KEY"))
             .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(jsonRequest))
+            .POST(HttpRequest.BodyPublishers.ofString(prompt))
             .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response =  httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         return processResponse(response).toString()
     }
 
     @Throws(IOException::class)
     private fun processResponse(response: HttpResponse<String>): String? {
         if (response.statusCode() != 200) {
-            println("Error: ${response.statusCode()}")
+            val statusCode = response.statusCode()
+            val reasonPhrase = when (statusCode) {
+                400 -> "Bad Request: The server could not understand the request."
+                401 -> "Unauthorized: Access is denied due to invalid credentials."
+                403 -> "Forbidden: The server understood the request, but it refuses to authorize it."
+                404 -> "Not Found: The requested resource could not be found."
+                500 -> "Internal Server Error: The server encountered an error."
+                else -> "Unexpected Error"
+            }
+            val responseBody = response.body() ?: "No response body available."
+            val headers = response.headers().map().toString()
+
+            println("""
+            Error occurred:
+            Status Code: $statusCode
+            Reason: $reasonPhrase
+            Response Body: $responseBody
+            Headers: $headers
+        """.trimIndent())
+
             return null
         }
         val pattern = Pattern.compile("\"text\"\\s*:\\s*\"([^\"]+)\"")

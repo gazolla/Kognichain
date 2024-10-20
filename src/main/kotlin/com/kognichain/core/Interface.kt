@@ -1,28 +1,39 @@
 package com.kognichain.core
 
-interface Actuator {
-    fun execute(parameters: Map<String, Any>): Result<Any>
+import kotlinx.coroutines.Deferred
+
+interface Task {
+    fun execute(input: Map<String, Any>): Result<String>  // Exemplo com Result<String>
 }
 
-interface Sensor {
-    fun sense(): Map<String, Any>
+interface Listener {
+    suspend fun listen(): Map<String, Any>?
 }
 
 interface DecisionMaker {
-    fun decide(input: Map<String, Any>): Action
+    suspend fun decide(input: Map<String, Any>): AgentDecision
 }
 
 interface Memory {
-    fun store(key: String, value: Any)
-    fun retrieve(key: String): Any?
-    fun clear()
+    suspend fun store(key: String, value: Any)
+    suspend fun retrieve(key: String): Any?
+    suspend fun clear()
 }
 
 interface Action {
-    fun execute(): Result<Any>
-    fun cancel(): Boolean
+    suspend fun execute(): Result<Any>
+    suspend fun cancel(): Boolean
 }
 
 interface LLMClient {
     suspend fun generateResponse(prompt: String): String
+}
+
+interface CommunicationChannel {
+    suspend fun send(message: Any)
+    suspend fun receive(): Any
+}
+
+interface CollaborativeTask {
+    fun execute(agents: List<Agent>, sharedMemory: Memory, communicationChannel: CommunicationChannel)
 }

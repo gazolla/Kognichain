@@ -1,17 +1,28 @@
-package com.kognichain.memories;
+package com.kognichain.memories
 
 import com.kognichain.core.Memory
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class SimpleMemory : Memory {
     private val storage = mutableMapOf<String, Any>()
+    private val mutex = Mutex()
 
-    override fun store(key: String, value: Any) {
-        storage[key] = value
+    override suspend fun store(key: String, value: Any) {
+        mutex.withLock {
+            storage[key] = value
+        }
     }
 
-    override fun retrieve(key: String): Any? = storage[key]
+    override suspend fun retrieve(key: String): Any? {
+        return mutex.withLock {
+            storage[key]
+        }
+    }
 
-    override fun clear() {
-        storage.clear()
+    override suspend fun clear() {
+        mutex.withLock {
+            storage.clear()
+        }
     }
 }
