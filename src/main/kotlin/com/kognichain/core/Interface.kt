@@ -3,7 +3,7 @@ package com.kognichain.core
 import kotlinx.coroutines.Deferred
 
 interface Task {
-    fun execute(input: Map<String, Any>): Result<String>  // Exemplo com Result<String>
+    fun execute(input: Map<String, Any>): Result<String>
 }
 
 interface Listener {

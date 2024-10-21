@@ -6,25 +6,26 @@ import com.kognichain.llm.Gemini
 import com.kognichain.listeners.UserInputListener
 import com.kognichain.tasks.ConsoleOutputTask
 import com.kognichain.memories.SimpleMemory
+import com.kognichain.tasks.SendEmailTask
 import kotlinx.coroutines.runBlocking
 
 fun main() = runBlocking{
-    val memory = SimpleMemory()
-    val tasks = listOf(ConsoleOutputTask())
-    val decisionMaker = LLMDecisionMaker(
-        llmClient = Gemini(),  // Podemos usar Gemini como LLM.
-        memory = memory,
-        tasks = tasks
+
+    val emailTask = SendEmailTask(
+        input = mapOf(
+            "host" to "smtp.gmail.com",
+            "port" to 587,
+            "username" to "",
+            "password" to ""
+        )
     )
 
-    val listeners = listOf(UserInputListener())
-    val initialPrompt = "You are a helpful assistant. Respond to the user's questions clearly."
    val agent = Agent(
-        listeners = listeners,
-        decisionMaker = decisionMaker,
-        tasks = tasks,
-        memory = memory,
-        initialPrompt = initialPrompt
+        listeners = listOf(UserInputListener()),
+        decisionMaker = LLMDecisionMaker(llmClient = Gemini()),
+        tasks = listOf(ConsoleOutputTask(),emailTask),
+        memory = SimpleMemory(),
+        initialPrompt = "You are a helpful assistant. Respond to the user's questions clearly."
     )
     agent.runAgent()
 }
