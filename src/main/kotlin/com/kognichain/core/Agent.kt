@@ -1,8 +1,9 @@
 package com.kognichain.core
 
 import com.kognichain.decisionmakers.LLMDecisionMaker
-import com.kognichain.examples.com.kognichain.core.AbstractAgent
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 class Agent(
@@ -12,7 +13,7 @@ class Agent(
     listeners: List<Listener> = emptyList(),
     memory: Memory,
     llmClient: LLMClient? = null,
-    communicationChannel: CommunicationChannel? = null,
+    communicationChannel: ObservableCommunicationChannel? = null,
     initialPrompt: String? = null
 ) : AbstractAgent<LLMDecisionMaker>(
     id = id,
@@ -24,25 +25,33 @@ class Agent(
     communicationChannel = communicationChannel,
     initialPrompt = initialPrompt
 ) {
+    private var observeMessagesJob: Job? = null
 
-
-    override fun setup(){
+    override suspend fun setup(){
         decisionMaker.memory = memory
         decisionMaker.tasks = tasks
+
+        initialPrompt?.let {
+            val decision = decisionMaker.decide( mapOf("message" to it))
+            processDecision(decision)
+        }
+
+        (communicationChannel as? ObservableCommunicationChannel)?.let { channel ->
+            coroutineScope {
+                observeMessagesJob = launch {
+                    channel.observeMessages().collect { message ->
+                        val input: MutableMap<String, Any> = mutableMapOf("message" to message)
+                        val decision = decisionMaker.decide(input)
+                        processDecision(decision)
+                    }
+                }
+            }
+        }
     }
 
     override suspend fun loop () {
-
-        initialPrompt?.let {
-            val llmResponse = llmClient?.generateResponse(it)
-            memory.store("initial_prompt", it)
-            memory.store("llm_initial_response", llmResponse ?: "No response from LLM")
-        }
-
-
         while (isRunning) {
             val input: MutableMap<String, Any> = mutableMapOf()
-
 
             var hasNewData = false
             for (listener in listeners) {
@@ -53,45 +62,50 @@ class Agent(
                 }
             }
 
-
-            delayTime = if (!hasNewData) {
-                (delayTime * 2).coerceAtMost(maxDelayTime)
-            } else {
-                minDelayTime
+            if (hasNewData) {
+                val decision = decisionMaker.decide(input)
+                processDecision(decision)
             }
-
-
-            val decision = decisionMaker.decide(input)
-
-
-            when (decision) {
-                is ExecuteTaskDecision -> {
-                    tasks.forEach { task ->
-                        val taskResult = task.execute(decision.parameters ?: emptyMap())
-                        if (taskResult.isSuccess) {
-                            taskResult.getOrNull()?.let { result ->
-                                memory.store("task_result", result)
-                            }
-                        }
-                    }
-                }
-                is StopAgentDecision -> stopAgent()
-                is CustomDecision -> {
-
-                    communicationChannel?.send("Decision: ${decision.details} from Agent $id")
-                }
-                else -> {
-                    println("No valid decision was made.")
-                }
-            }
-
-
-            delay(delayTime)
         }
     }
 
-    // Método para receber mensagens de outros agentes
-    suspend fun receiveMessage(): Any? {
-        return communicationChannel?.receive()
+    private suspend fun processDecision(decision: AgentDecision) {
+        when (decision) {
+            is ExecuteTaskDecision -> {
+                tasks.forEach { task ->
+                    val taskResult = task.execute(decision.parameters ?: emptyMap())
+                    decision.parameters?.let{ map ->
+                        if (map.contains("userResponse")){
+                            communicationChannel ?: return
+                            communicationChannel.sendMessage(map["userResponse"].toString())
+                        }
+                    }
+                    if (taskResult.isSuccess) {
+                        taskResult.getOrNull()?.let { result ->
+                            memory.store("task_result", result)
+                        }
+                    }
+                }
+            }
+            is RespondToUserDecision -> {
+                communicationChannel ?: return
+                communicationChannel.sendMessage(decision.userResponse)
+            }
+            is StopAgentDecision -> stopAgent()
+            is CustomDecision -> {
+                communicationChannel ?: return
+                communicationChannel.sendMessage("Decision: ${decision.details} from Agent $id")
+
+            }
+
+            else -> {
+                println("No valid decision was made.")
+            }
+        }
+    }
+
+    override suspend fun stopAgent() {
+        observeMessagesJob?.cancel()
+        isRunning = false
     }
 }

@@ -8,6 +8,7 @@ import com.kognichain.core.DecisionMaker
 import com.kognichain.core.ExecuteTaskDecision
 import com.kognichain.core.LLMClient
 import com.kognichain.core.Memory
+import com.kognichain.core.RespondToUserDecision
 import com.kognichain.core.StopAgentDecision
 import com.kognichain.core.Task
 
@@ -44,8 +45,8 @@ class LLMDecisionMaker(
     Available tasks: $availableTasksDescription
     
     Your task is to:
-    1. Choose the most appropriate task to execute based on the user's input, or decide to stop the agent.
-    2. Provide the parameters required for this task (if applicable) in a structured JSON format.
+    1. Choose the most appropriate task to execute based on the user's input, or decide to respond to the user without executing a task.
+    2. If a task is selected, provide the parameters required for this task (if applicable) in a structured JSON format.
     3. Generate a clear and concise response to the user based on the context.
     
     The response should be formatted as follows:
@@ -55,7 +56,7 @@ class LLMDecisionMaker(
         \"userResponse\": \"Your response to the user\"
     }
     
-    If no task is selected, respond with \"stop\" and a custom message.
+    If no task is selected and you want to respond to the user, use \"respond\" as the task name.
     """.trimIndent()
 
         return formatPromptForLLM(prompt)
@@ -79,7 +80,7 @@ class LLMDecisionMaker(
         taskParameters["userResponse"] = userResponse
         return when {
             taskName.equals("stop", ignoreCase = true) -> StopAgentDecision()
-            taskName.isEmpty() -> CustomDecision("No task was selected.")
+            taskName.equals("respond", ignoreCase = true) -> RespondToUserDecision(userResponse)
             else -> {
                 val task = tasks.find { it::class.simpleName == taskName }
                 if (task != null) {
@@ -107,8 +108,6 @@ class LLMDecisionMaker(
                     val fieldValue = parametersNode.get(fieldName).asText()
                     parameters[fieldName.trim()] = fieldValue
                 }
-            } else {
-                println("'parameters' está vazio.")
             }
         } else {
             println("'parameters' não encontrado ou não é um objeto.")

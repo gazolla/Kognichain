@@ -1,6 +1,7 @@
 package com.kognichain.core
 
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.flow.Flow
 
 interface Task {
     fun execute(input: Map<String, Any>): Result<String>
@@ -20,18 +21,17 @@ interface Memory {
     suspend fun clear()
 }
 
-interface Action {
-    suspend fun execute(): Result<Any>
-    suspend fun cancel(): Boolean
-}
-
 interface LLMClient {
     suspend fun generateResponse(prompt: String): String
 }
 
 interface CommunicationChannel {
-    suspend fun send(message: Any)
-    suspend fun receive(): Any
+    suspend fun sendMessage(message: String)
+    suspend fun receiveMessage(): String
+}
+
+interface ObservableCommunicationChannel : CommunicationChannel {
+    suspend fun observeMessages(): Flow<String>
 }
 
 interface CollaborativeTask {

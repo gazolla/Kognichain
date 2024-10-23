@@ -8,17 +8,35 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.util.Properties
 
-class Gemini : LLMClient {
+class Gemini(
+    private var input: Map<String, Any>? = mutableMapOf<String, Any>()
+) : LLMClient {
     private val httpClient = HttpClient.newBuilder().build()
-    private val API_KEY = ""
-    private val URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent"
+    private var apiKey:String?
+    private val url:String?
+
+    private fun loadProperties(): Properties {
+        val properties = Properties()
+        val inputStream = Thread.currentThread().contextClassLoader.getResourceAsStream("application.properties")
+        inputStream?.use {
+            properties.load(it)
+        }
+        return properties
+    }
+
+    init {
+        val p = loadProperties()
+        apiKey = p.getProperty("gemini.apikey") ?: System.getenv("GEMINI_API_KEY") ?: ""
+        url = p.getProperty("gemini.url") ?: System.getenv("GEMINI_URL") ?: ""
+    }
 
     private val objectMapper = ObjectMapper()
 
     override suspend fun generateResponse(prompt: String): String {
         val request = HttpRequest.newBuilder()
-            .uri(URI.create("$URL?alt=sse&key=$API_KEY"))
+            .uri(URI.create("$url?alt=sse&key=$apiKey"))
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(prompt))
             .build()

@@ -10,11 +10,10 @@ import jakarta.mail.internet.MimeMessage
 import java.util.*
 
 class SendEmailTask(
-    private val input: Map<String, Any> // Recebe o input no construtor
+    private var input: Map<String, Any>? = mutableMapOf<String, Any>()
 ) : Task {
 
-    // Carrega as propriedades de e-mail de um arquivo properties
-    private fun loadEmailProperties(): Properties {
+     private fun loadEmailProperties(): Properties {
         val properties = Properties()
         val inputStream = Thread.currentThread().contextClassLoader.getResourceAsStream("application.properties")
         inputStream?.use {
@@ -25,8 +24,7 @@ class SendEmailTask(
 
     override fun execute(taskInput: Map<String, Any>): Result<String> {
 
-        val mergedInput = input.toMutableMap().apply { putAll(taskInput) }
-
+        val mergedInput = input!!.toMutableMap().apply { putAll(taskInput) }
 
         val host = mergedInput["host"] as? String ?: loadEmailProperties().getProperty("mail.smtp.host")
         ?: System.getenv("MAIL_SMTP_HOST") ?: "default-smtp.gmail.com"

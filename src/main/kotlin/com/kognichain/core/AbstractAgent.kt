@@ -1,11 +1,5 @@
-package com.kognichain.examples.com.kognichain.core
+package com.kognichain.core
 
-import com.kognichain.core.CommunicationChannel
-import com.kognichain.core.DecisionMaker
-import com.kognichain.core.LLMClient
-import com.kognichain.core.Listener
-import com.kognichain.core.Memory
-import com.kognichain.core.Task
 import java.util.UUID
 
 abstract class AbstractAgent<T : DecisionMaker>(
@@ -24,13 +18,11 @@ abstract class AbstractAgent<T : DecisionMaker>(
     protected val maxDelayTime: Long = 5000
     protected val minDelayTime: Long = 100
 
-    abstract fun setup()
+    abstract suspend fun setup()
     abstract suspend fun loop()
     suspend fun runAgent() {
         setup()
         loop()
     }
-    fun stopAgent() {
-        isRunning = false
-    }
+    abstract suspend fun stopAgent()
 }
