@@ -46,14 +46,21 @@ class LLMDecisionMaker(
     
     Your task is to:
     1. Choose the most appropriate task to execute based on the user's input, or decide to respond to the user without executing a task.
-    2. If a task is selected, provide the parameters required for this task (if applicable) in a structured JSON format.
+    2. If a task is selected, provide the parameters required for this task in a structured JSON format, using exact parameter names.
     3. Generate a clear and concise response to the user based on the context.
     
     The response should be formatted as follows:
     {
         \"task\": \"TaskName\",
-        \"parameters\": {\"param1\": \"value1\", \"param2\": \"value2\"},
+        \"parameters\": {\"filename\": \"value1\", \"content\": \"value2\"},
         \"userResponse\": \"Your response to the user\"
+    }
+    
+    Example response:
+    {
+        \"task\": \"SaveFileTask\",
+        \"parameters\": {\"filename\": \"example.txt\", \"content\": \"This is the file content.\"},
+        \"userResponse\": \"I have saved the file successfully.\"
     }
     
     If no task is selected and you want to respond to the user, use \"respond\" as the task name.
@@ -61,6 +68,7 @@ class LLMDecisionMaker(
 
         return formatPromptForLLM(prompt)
     }
+
 
     private fun formatPromptForLLM(prompt: String): String {
         return """{"contents":[{"parts":[{"text":"$prompt"}],"role":"user"}]}"""
