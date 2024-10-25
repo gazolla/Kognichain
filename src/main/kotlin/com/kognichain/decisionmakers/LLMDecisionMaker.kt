@@ -49,6 +49,9 @@ class LLMDecisionMaker(
     2. If a task is selected, provide the parameters required for this task in a structured JSON format, using exact parameter names.
     3. Generate a clear and concise response to the user based on the context.
     
+    IMPORTANT: Ensure that the response is formatted as valid JSON, using exact parameter names. Avoid using characters that might break JSON formatting, such as unescaped quotes or newlines within strings. 
+    If the content requires newlines, ensure they are properly escaped.
+    
     The response should be formatted as follows:
     {
         \"task\": \"TaskName\",

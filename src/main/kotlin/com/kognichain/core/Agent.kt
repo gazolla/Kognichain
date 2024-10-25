@@ -69,15 +69,17 @@ class Agent(
         }
     }
 
+    private val taskMap: Map<String, Task> = tasks.associateBy { it::class.simpleName ?: "" }
+
     private suspend fun processDecision(decision: AgentDecision) {
         when (decision) {
             is ExecuteTaskDecision -> {
-                tasks.forEach { task ->
-                    val taskResult = task.execute(decision.parameters ?: emptyMap())
-                    decision.parameters?.let{ map ->
-                        if (map.contains("userResponse")){
-                            communicationChannel ?: return
-                            communicationChannel.sendMessage(map["userResponse"].toString())
+                val taskToExecute = taskMap[decision.taskName]
+                if (taskToExecute != null) {
+                    val taskResult = taskToExecute.execute(decision.parameters ?: emptyMap())
+                    decision.parameters?.let { map ->
+                        if (map.contains("userResponse")) {
+                            communicationChannel?.sendMessage(map["userResponse"].toString())
                         }
                     }
                     if (taskResult.isSuccess) {
@@ -85,19 +87,17 @@ class Agent(
                             memory.store("task_result", result)
                         }
                     }
+                } else {
+                    communicationChannel?.sendMessage("Task ${decision.taskName} not found")
                 }
             }
             is RespondToUserDecision -> {
-                communicationChannel ?: return
-                communicationChannel.sendMessage(decision.userResponse)
+                communicationChannel?.sendMessage(decision.userResponse)
             }
             is StopAgentDecision -> stopAgent()
             is CustomDecision -> {
-                communicationChannel ?: return
-                communicationChannel.sendMessage("Decision: ${decision.details} from Agent $id")
-
+                communicationChannel?.sendMessage("Decision: ${decision.details} from Agent $id")
             }
-
             else -> {
                 println("No valid decision was made.")
             }

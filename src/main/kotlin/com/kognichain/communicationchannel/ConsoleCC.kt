@@ -26,13 +26,12 @@ class ConsoleCC : ObservableCommunicationChannel, Closeable {
                 while (isActive) {
                     val line = withContext(Dispatchers.IO) {
                         reader.readLine()
-                    } ?: break  // Break on EOF
+                    } ?: break
 
                     messageChannel.send(line)
                     messagesFlow.send(line)
                 }
             } catch (e: CancellationException) {
-                // Normal cancellation, ignore
             } catch (e: Exception) {
                 println("Error reading from console: ${e.message}")
             }
@@ -57,7 +56,7 @@ class ConsoleCC : ObservableCommunicationChannel, Closeable {
                 send(message)
             }
         } catch (e: CancellationException) {
-            // Tratamento normal de cancelamento
+            println("Error observeMessages: ${e.message}")
         }
     }
 
